@@ -30,7 +30,8 @@ def node_to_dict(node, id, parent_id):
     }
 
 
-def export_scenegraph(graph, filename):
+def export_scenegraph(graph, filename,
+                      type_blacklist=['CameraNode', 'ScreenNode']):
     '''Writes the given avango-gua scene graph into a json-file'''
 
     # counter as unique id for every node to store relations between nodes
@@ -54,7 +55,9 @@ def export_scenegraph(graph, filename):
 
             # add the node's children to the queue and store the current node's
             # id as their parent-id
-            queue.extend([(child, node_id) for child in node.Children.value])
+            queue.extend([(child, node_id)
+                for child in node.Children.value
+                    if not type(child).__name__ in type_blacklist])
 
             # increase the counter to assign the next node the next free id
             node_id += 1
