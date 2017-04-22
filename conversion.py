@@ -8,7 +8,7 @@ FIELD_BLACKLIST = [
     'BoundingBox',
     'Children',
     'Geometry',
-    'Material', # TODO: support materials
+    'Material',  # TODO: support materials
     'Parent',
     'Path',
     'Transform',
@@ -32,14 +32,14 @@ def av_gua_to_json_type(var):
             'Name': var.Name.value,
             'ShaderName': var.ShaderName.value,
             'EnableBackfaceCulling': var.EnableBackfaceCulling.value
-            }
+        }
     elif type(var) in [avango._avango.MFString_wrapper,
                        avango._avango.MFFloat_wrapper]:
         return [item for item in var]
     else:
         raise TypeError(
             'There is no conversion from type {} to a json-compatible type'
-                .format(type(var).__name__))
+            .format(type(var).__name__))
 
 
 def node_to_dict(node, id, parent_id):
@@ -68,7 +68,8 @@ def node_to_dict(node, id, parent_id):
     for i in range(node.get_num_fields()):
         field_name = node.get_field_name(i)
         if not field_name in FIELD_BLACKLIST:
-            d['fields'][field_name] = av_gua_to_json_type(node.get_field(i).value)
+            d['fields'][field_name] = av_gua_to_json_type(
+                node.get_field(i).value)
 
     return d
 
@@ -105,6 +106,6 @@ def dict_to_node(d):
             getattr(node, field_name).value = field_type(*field_value)
         else:
             raise TypeError('Unable to set value of field {} with type "{}"'
-                .format(field_name, field_type))
+                            .format(field_name, field_type))
 
     return node, d['id'], d['parent']

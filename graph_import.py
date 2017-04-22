@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
-from collections import deque
 import json
 
 import avango
 import avango.gua
 
 from .conversion import dict_to_node
+
 
 def import_scenegraph(filename, name='scenegraph',
                       type_blacklist=['CameraNode', 'ScreenNode']):
