@@ -83,6 +83,12 @@ def dict_to_node(d):
     else:
         node = getattr(avango.gua.nodes, d['type'])()
 
+    # set the transformation
+    trans_mat = avango.gua.make_trans_mat(*d['trans'])
+    rot_mat = avango.gua.make_rot_mat(*d['rot'])
+    scale_mat = avango.gua.make_scale_mat(*d['scale'])
+    node.Transform.value = trans_mat * rot_mat * scale_mat
+
     # read field values
     for field_name, field_value in d['fields'].items():
         if not node.has_field(field_name):
