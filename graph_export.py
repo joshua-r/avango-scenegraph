@@ -9,11 +9,21 @@ from .conversion import node_to_dict
 TYPE_BLACKLIST = ['CameraNode', 'ScreenNode']
 
 
-def export_scenegraph(graph, filename):
-    '''Writes the given avango-gua scene graph into a json-file'''
+def export_scenegraph(filename, graph):
+    '''Writes the given scene graph into a json-file'''
+    export_subtree(graph.Root.value, filename)
+
+
+def export_subtree(filename, node):
+    '''Writes the subtree of the given scene graph node into a json-file
+
+    Arguments:
+    node -- the scene graph node whose subtree is stored (excluding the node
+            itself)
+    '''
 
     # counter as unique id for every node to store relations between nodes;
-    # starts at one because root node is 0
+    # starts at one because given node is 0
     node_id = 1
 
     # holds tuples of node and parent-id for nodes to be stored
@@ -24,9 +34,8 @@ def export_scenegraph(graph, filename):
         queue.extend([(node, parent) for node, parent in nodes
                       if not type(node).__name__ in TYPE_BLACKLIST])
 
-    # initialize queue with child nodes of the root node
-    add_nodes_to_queue([(child, 0)
-                        for child in graph.Root.value.Children.value])
+    # initialize queue with child nodes of the given node
+    add_nodes_to_queue([(child, 0) for child in node.Children.value])
 
     # store graph as json into file with of given filename
     with open(filename, 'w') as json_file:
