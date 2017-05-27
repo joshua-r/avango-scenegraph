@@ -6,9 +6,10 @@ import json
 from .conversion import node_to_dict
 
 
-def export_scenegraph(graph,
-                      filename,
-                      type_blacklist=['CameraNode', 'ScreenNode']):
+TYPE_BLACKLIST = ['CameraNode', 'ScreenNode']
+
+
+def export_scenegraph(graph, filename):
     '''Writes the given avango-gua scene graph into a json-file'''
 
     # counter as unique id for every node to store relations between nodes;
@@ -21,7 +22,7 @@ def export_scenegraph(graph,
     # function to add tuples of the form (node, parent_id) to the queue
     def add_nodes_to_queue(nodes):
         queue.extend([(node, parent) for node, parent in nodes
-                      if not type(node).__name__ in type_blacklist])
+                      if not type(node).__name__ in TYPE_BLACKLIST])
 
     # initialize queue with child nodes of the root node
     add_nodes_to_queue([(child, 0)

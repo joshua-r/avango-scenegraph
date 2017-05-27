@@ -8,8 +8,7 @@ import avango.gua
 from .conversion import dict_to_node
 
 
-def import_scenegraph(filename, name='scenegraph',
-                      type_blacklist=['CameraNode', 'ScreenNode']):
+def import_scenegraph(filename, name='scenegraph'):
     '''Reads a previously exported avango-gua scene graph from a json-file'''
     graph = avango.gua.nodes.SceneGraph(Name=name)
 
