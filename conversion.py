@@ -2,6 +2,8 @@
 
 import avango
 import avango.gua
+from pydoc import locate
+import itertools
 import re
 
 FIELD_BLACKLIST = [
@@ -14,36 +16,36 @@ FIELD_BLACKLIST = [
     'WorldTransform'
 ]
 
+SIMPLE_FIELD_TYPES = [a + b for a, b in itertools.product(['SF', 'MF'], ['Int', 'UInt', 'Bool', 'Float', 'String'])]
 
-def av_gua_to_json_type(var):
-    if type(var) in [str, int, float, bool]:
-        return var
-    elif type(var) == avango.gua.Vec3:
-        return [var.x, var.y, var.z]
-    elif type(var) == avango.gua.Vec4:
-        return [var.x, var.y, var.z, var.w]
-    elif type(var) == avango.gua.Quat:
-        return [var.x, var.y, var.z, var.w]
-    elif type(var) == avango.gua.Mat4:
+
+def serialize_field_value(value):
+    if type(value) in [str, int, float, bool]:
+        return value
+    elif type(value) == avango.gua.Vec3:
+        return [value.x, value.y, value.z]
+    elif type(value) == avango.gua.Vec4:
+        return [value.x, value.y, value.z, value.w]
+    elif type(value) == avango.gua.Quat:
+        return [value.x, value.y, value.z, value.w]
+    elif type(value) == avango.gua.Mat4:
         return [
-            var.get_element(row, col) for row in range(4) for col in range(4)
+            value.get_element(row, col) for row in range(4) for col in range(4)
         ]
-    elif type(var) == avango.gua.Color:
-        return [var.r, var.g, var.b]
-    elif type(var) == avango.gua.Material:
+    elif type(value) == avango.gua.Color:
+        return [value.r, value.g, value.b]
+    elif type(value) == avango.gua.Material:
         return {
-            'Name': var.Name.value,
-            'ShaderName': var.ShaderName.value,
-            'EnableBackfaceCulling': var.EnableBackfaceCulling.value
+            'Name': value.Name.value,
+            'ShaderName': value.ShaderName.value,
+            'EnableBackfaceCulling': value.EnableBackfaceCulling.value
         }
-    elif type(var) in [
-            avango._avango.MFString_wrapper, avango._avango.MFFloat_wrapper
-    ]:
-        return [item for item in var]
+    elif type(value) in [avango.MFString_wrapper, avango.MFFloat_wrapper]:
+        return [item for item in value]
     else:
         raise TypeError(
             'There is no conversion from type {} to a json-compatible type'
-            .format(type(var).__name__))
+            .format(type(value).__name__))
 
 
 def node_to_dict(node, id, parent_id):
@@ -66,10 +68,14 @@ def node_to_dict(node, id, parent_id):
     # iterate over all the fields that are not already covered above and store
     # their values
     for i in range(node.get_num_fields()):
-        field_name = node.get_field_name(i)
-        if not field_name in FIELD_BLACKLIST:
-            d['fields'][field_name] = av_gua_to_json_type(
-                node.get_field(i).value)
+        name = node.get_field_name(i)
+        if not name in FIELD_BLACKLIST:
+            field = node.get_field(i)
+            value = node.get_field(i).value
+            d['fields'][name] = {
+                'type': '{}.{}'.format(field.__module__, type(field).__name__),
+                'value': serialize_field_value(value)
+            }
 
     return d
 
@@ -79,31 +85,39 @@ def dict_to_node(d):
 
     if d['type'] == 'TriMeshNode':
         loader = avango.gua.nodes.TriMeshLoader()
-        node = loader.create_geometry_from_file(d['fields']['Name'],
+        node = loader.create_geometry_from_file(d['fields']['Name']['value'],
                                                 d['filename'])
     else:
         node = getattr(avango.gua.nodes, d['type'])()
 
     # read field values
-    for field_name, field_value in d['fields'].items():
-        if not node.has_field(field_name):
-            raise AttributeError('Node of type "{}" has no field "{}"'.format(
-                d['type'], field_name))
+    for field_name, data in d['fields'].items():
+        full_field_type = data['type']
+        field_type = full_field_type.split('.')[-1]
+        field_value = data['value']
 
-        field_type = type(getattr(node, field_name).value)
-        if type(field_value) in [str, int, float, bool]:
+        # node lacks this field, create it first
+        if not node.has_field(field_name):
+            # raise AttributeError('Node of type "{}" has no field "{}"'.format(
+            #     d['type'], field_name))
+            node.add_field(locate(full_field_type)(), field_name)
+
+        field_value_type = type(getattr(node, field_name).value)
+
+        if field_type in SIMPLE_FIELD_TYPES:
             getattr(node, field_name).value = field_value
-        elif field_type in [avango.MFString_wrapper, avango.MFFloat_wrapper]:
-            getattr(node, field_name).value = field_value
-        elif field_type == avango.gua.Mat4:
+        elif field_type == 'SFMatrix4':
             mat = avango.gua.Mat4()
             for i, value in enumerate(field_value):
                 row = i // 4
                 col = i % 4
                 mat.set_element(row, col, value)
             getattr(node, field_name).value = mat
-        elif field_type:
-            getattr(node, field_name).value = field_type(*field_value)
+        elif field_value_type:
+            # this type was not handled yet; as a last resort, try to create
+            # the type by passing all given values as parameters to its
+            # default constructor
+            getattr(node, field_name).value = field_value_type(*field_value)
         else:
             raise TypeError('Unable to set value of field {} with type "{}"'
                             .format(field_name, field_type))
