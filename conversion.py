@@ -11,7 +11,6 @@ FIELD_BLACKLIST = [
     'Material',  # TODO: support materials
     'Parent',
     'Path',
-    'Transform',
     'WorldTransform'
 ]
 
@@ -52,18 +51,9 @@ def node_to_dict(node, id, parent_id):
 
     # set some values that all nodes share
     d = {
-        'id':
-        id,
-        'parent':
-        parent_id,
-        'type':
-        type(node).__name__,
-        'trans':
-        av_gua_to_json_type(node.Transform.value.get_translate()),
-        'rot':
-        av_gua_to_json_type(node.Transform.value.get_rotate_scale_corrected()),
-        'scale':
-        av_gua_to_json_type(node.Transform.value.get_scale()),
+        'id': id,
+        'parent': parent_id,
+        'type': type(node).__name__,
         'fields': {}
     }
 
@@ -94,12 +84,6 @@ def dict_to_node(d):
     else:
         node = getattr(avango.gua.nodes, d['type'])()
 
-    # set the transformation
-    trans_mat = avango.gua.make_trans_mat(*d['trans'])
-    rot_mat = avango.gua.make_rot_mat(*d['rot'])
-    scale_mat = avango.gua.make_scale_mat(*d['scale'])
-    node.Transform.value = trans_mat * rot_mat * scale_mat
-
     # read field values
     for field_name, field_value in d['fields'].items():
         if not node.has_field(field_name):
@@ -112,10 +96,12 @@ def dict_to_node(d):
         elif field_type in [avango.MFString_wrapper, avango.MFFloat_wrapper]:
             getattr(node, field_name).value = field_value
         elif field_type == avango.gua.Mat4:
-            for i, value in field_value:
+            mat = avango.gua.Mat4()
+            for i, value in enumerate(field_value):
                 row = i // 4
                 col = i % 4
-                getattr(node, field_name).value.set_element(row, col, value)
+                mat.set_element(row, col, value)
+            getattr(node, field_name).value = mat
         elif field_type:
             getattr(node, field_name).value = field_type(*field_value)
         else:
