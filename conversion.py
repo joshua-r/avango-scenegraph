@@ -25,6 +25,10 @@ def av_gua_to_json_type(var):
         return [var.x, var.y, var.z, var.w]
     elif type(var) == avango.gua.Quat:
         return [var.x, var.y, var.z, var.w]
+    elif type(var) == avango.gua.Mat4:
+        return [
+            var.get_element(row, col) for row in range(4) for col in range(4)
+        ]
     elif type(var) == avango.gua.Color:
         return [var.r, var.g, var.b]
     elif type(var) == avango.gua.Material:
@@ -33,8 +37,9 @@ def av_gua_to_json_type(var):
             'ShaderName': var.ShaderName.value,
             'EnableBackfaceCulling': var.EnableBackfaceCulling.value
         }
-    elif type(var) in [avango._avango.MFString_wrapper,
-                       avango._avango.MFFloat_wrapper]:
+    elif type(var) in [
+            avango._avango.MFString_wrapper, avango._avango.MFFloat_wrapper
+    ]:
         return [item for item in var]
     else:
         raise TypeError(
@@ -47,13 +52,18 @@ def node_to_dict(node, id, parent_id):
 
     # set some values that all nodes share
     d = {
-        'id': id,
-        'parent': parent_id,
-        'type': type(node).__name__,
-        'trans': av_gua_to_json_type(node.Transform.value.get_translate()),
-        'rot': av_gua_to_json_type(
-            node.Transform.value.get_rotate_scale_corrected()),
-        'scale': av_gua_to_json_type(node.Transform.value.get_scale()),
+        'id':
+        id,
+        'parent':
+        parent_id,
+        'type':
+        type(node).__name__,
+        'trans':
+        av_gua_to_json_type(node.Transform.value.get_translate()),
+        'rot':
+        av_gua_to_json_type(node.Transform.value.get_rotate_scale_corrected()),
+        'scale':
+        av_gua_to_json_type(node.Transform.value.get_scale()),
         'fields': {}
     }
 
@@ -79,8 +89,8 @@ def dict_to_node(d):
 
     if d['type'] == 'TriMeshNode':
         loader = avango.gua.nodes.TriMeshLoader()
-        node = loader.create_geometry_from_file(
-            d['fields']['Name'], d['filename'])
+        node = loader.create_geometry_from_file(d['fields']['Name'],
+                                                d['filename'])
     else:
         node = getattr(avango.gua.nodes, d['type'])()
 
@@ -99,9 +109,13 @@ def dict_to_node(d):
         field_type = type(getattr(node, field_name).value)
         if type(field_value) in [str, int, float, bool]:
             getattr(node, field_name).value = field_value
-        elif field_type in [avango._avango.MFString_wrapper,
-                            avango._avango.MFFloat_wrapper]:
+        elif field_type in [avango.MFString_wrapper, avango.MFFloat_wrapper]:
             getattr(node, field_name).value = field_value
+        elif field_type == avango.gua.Mat4:
+            for i, value in field_value:
+                row = i // 4
+                col = i % 4
+                getattr(node, field_name).value.set_element(row, col, value)
         elif field_type:
             getattr(node, field_name).value = field_type(*field_value)
         else:
