@@ -11,7 +11,7 @@ TYPE_BLACKLIST = ['CameraNode', 'ScreenNode']
 
 def export_scenegraph(filename, graph):
     '''Writes the given scene graph into a json-file'''
-    export_subtree(graph.Root.value, filename)
+    export_subtree(filename, graph.Root.value)
 
 
 def export_subtree(filename, node):
