@@ -34,13 +34,13 @@ def set_field_value(node, field_name, field_type, field_value):
                         .format(field_name, field_type))
 
 
-def create_node_from_json(json):
+def create_node_from_json(json, loader_flags=avango.gua.LoaderFlags.DEFAULTS):
     '''Creates a scene graph node from a json dictionary'''
 
     if json['type'] == 'TriMeshNode':
         loader = avango.gua.nodes.TriMeshLoader()
         node = loader.create_geometry_from_file(
-            json['fields']['Name']['value'], json['filename'])
+            json['fields']['Name']['value'], json['filename'], loader_flags)
     else:
         node = getattr(avango.gua.nodes, json['type'])()
 
@@ -62,15 +62,19 @@ def create_node_from_json(json):
     return node, json['id'], json['parent']
 
 
-def import_scenegraph(filename, name='scenegraph'):
+def import_scenegraph(filename,
+                      name='scenegraph',
+                      loader_flags=avango.gua.LoaderFlags.DEFAULTS):
     '''Reads a previously exported scene graph from a json-file'''
 
     graph = avango.gua.nodes.SceneGraph(Name=name)
-    import_subtree(filename, graph.Root.value)
+    import_subtree(filename, graph.Root.value, loader_flags)
     return graph
 
 
-def import_subtree(filename, node):
+def import_subtree(filename,
+                   node,
+                   loader_flags=avango.gua.LoaderFlags.DEFAULTS):
     '''Reads a subtree of the given scene graph node stored as a json-file'''
 
     # dictionary to map node ids to actual nodes;
@@ -81,7 +85,8 @@ def import_subtree(filename, node):
     with open(filename, 'r') as json_file:
         for line in json_file:
             # parse json line to node
-            crrnt_node, id, parent_id = create_node_from_json(json.loads(line))
+            crrnt_node, id, parent_id = create_node_from_json(
+                json.loads(line), loader_flags)
 
             # store node by id
             nodes[id] = crrnt_node
