@@ -19,7 +19,8 @@ def import_scenegraph(filename, name='scenegraph'):
 def import_subtree(filename, node):
     '''Reads a subtree of the given scene graph node stored as a json-file'''
 
-    # dictionary to map node ids to actual nodes; fill initially with given node
+    # dictionary to map node ids to actual nodes;
+    # fill initially with given node
     nodes = {0: node}
 
     # load graph from json of given file name

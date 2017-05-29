@@ -16,7 +16,11 @@ FIELD_BLACKLIST = [
     'WorldTransform'
 ]
 
-SIMPLE_FIELD_TYPES = [a + b for a, b in itertools.product(['SF', 'MF'], ['Int', 'UInt', 'Bool', 'Float', 'String'])]
+SIMPLE_FIELD_TYPES = [
+    pre + typename
+    for pre, typename in itertools.product(
+        ['SF', 'MF'], ['Int', 'UInt', 'Bool', 'Float', 'String'])
+]
 
 
 def serialize_field_value(value):
@@ -98,8 +102,6 @@ def dict_to_node(d):
 
         # node lacks this field, create it first
         if not node.has_field(field_name):
-            # raise AttributeError('Node of type "{}" has no field "{}"'.format(
-            #     d['type'], field_name))
             node.add_field(locate(full_field_type)(), field_name)
 
         field_value_type = type(getattr(node, field_name).value)
