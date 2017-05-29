@@ -2,11 +2,54 @@
 
 from collections import deque
 import json
+import re
 
-from .conversion import node_to_dict
+from .conversion import serialize_field_value
 
+
+FIELD_BLACKLIST = [
+    'BoundingBox',
+    'Children',
+    'Geometry',
+    'Material',  # TODO: support materials
+    'Parent',
+    'Path',
+    'WorldTransform'
+]
 
 TYPE_BLACKLIST = ['CameraNode', 'ScreenNode']
+
+
+def serialize_node(node, id, parent_id):
+    '''Converts an avango-gua node to a python dictionary'''
+
+    # set some values that all nodes share
+    d = {
+        'id': id,
+        'parent': parent_id,
+        'type': type(node).__name__,
+        'fields': {}
+    }
+
+    if type(node).__name__ == 'TriMeshNode':
+        # extract mesh filename from the geometry-field
+        match = re.search('TriMesh\|(.*?)\|', node.Geometry.value)
+        filename = match.group(1)
+        d['filename'] = filename
+
+    # iterate over all the fields that are not already covered above and store
+    # their values
+    for i in range(node.get_num_fields()):
+        name = node.get_field_name(i)
+        if not name in FIELD_BLACKLIST:
+            field = node.get_field(i)
+            value = node.get_field(i).value
+            d['fields'][name] = {
+                'type': '{}.{}'.format(field.__module__, type(field).__name__),
+                'value': serialize_field_value(value)
+            }
+
+    return d
 
 
 def export_scenegraph(filename, graph):
@@ -46,7 +89,7 @@ def export_subtree(filename, node):
             # write node as one json-object as one line into the file
             json_file.write(
                 json.dumps(
-                    obj=node_to_dict(
+                    obj=serialize_node(
                         node=node, id=node_id, parent_id=parent_id),
                     sort_keys=True))
             json_file.write('\n')
